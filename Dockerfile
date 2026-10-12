@@ -7,7 +7,11 @@ RUN pip wheel --wheel-dir /wheels -r requirements.txt
 
 FROM python:3.12-slim AS runtime
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 WEB_CONCURRENCY=2
-RUN useradd --create-home --uid 10001 appuser
+RUN useradd --create-home --uid 10001 appuser \
+    && mkdir -p /data && chown 10001:10001 /data
+# Writable default so the container boots as a non-root user with zero config.
+# Real deployments override this with PostgreSQL via DATABASE_URL (compose and Kubernetes do).
+ENV DATABASE_URL=sqlite:////data/documind.db
 WORKDIR /app
 COPY --from=builder /wheels /wheels
 COPY requirements.txt .

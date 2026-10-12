@@ -92,9 +92,15 @@ jobs:
       - name: Smoke-test the container
         run: |
           docker run -d --name api -p 8000:8000 -e JWT_SECRET=ci-smoke-secret -e ENVIRONMENT=local documind-api:ci
-          for i in $(seq 1 30); do curl -fsS localhost:8000/health && break || sleep 2; done
-          curl -fsS localhost:8000/ready
+          healthy=0
+          for i in $(seq 1 30); do
+            if curl -fsS localhost:8000/health; then healthy=1; break; fi
+            sleep 2
+          done
+          echo "---- container logs ----"
           docker logs api
+          if [ "$healthy" != 1 ]; then echo "container never became healthy"; exit 1; fi
+          curl -fsS localhost:8000/ready
 
   # Deploys only when EVERY job above passed, including the evaluation gate. Skipped unless the
   # repository variable DEPLOY_ENABLED is "true" (set it after running Terraform; see README).
