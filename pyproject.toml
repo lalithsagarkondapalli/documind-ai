@@ -1,0 +1,22 @@
+[project]
+name = "documind-ai"
+version = "1.0.0"
+description = "Multi-agent RAG platform for regulatory and financial document review"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit", "tests/integration"]
+python_files = ["test_*.py"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["tests/evaluation"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008", "UP007", "UP045"]  # B008: FastAPI Depends() defaults are idiomatic
+
+[tool.ruff.lint.per-file-ignores]
+"tests/conftest.py" = ["E501"]  # long literal contract text

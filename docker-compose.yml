@@ -1,0 +1,64 @@
+# Local full stack: API + Postgres + Redis + Qdrant + OpenTelemetry + Prometheus + Grafana
+#   cp .env.example .env   # set JWT_SECRET
+#   docker compose up --build
+services:
+  api:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      ENVIRONMENT: local
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      DATABASE_URL: postgresql+psycopg://documind:documind@postgres:5432/documind
+      REDIS_URL: redis://redis:6379/0
+      VECTOR_BACKEND: qdrant
+      QDRANT_URL: http://qdrant:6333
+      OTLP_ENDPOINT: http://otel-collector:4318/v1/traces
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      qdrant: {condition: service_started}
+
+  postgres:
+    image: postgres:16-alpine
+    environment: {POSTGRES_USER: documind, POSTGRES_PASSWORD: documind, POSTGRES_DB: documind}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U documind"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    volumes: [qdrant_data:/qdrant/storage]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes: ["./infra/observability/otel-collector.yaml:/etc/otel/config.yaml:ro"]
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    volumes: ["./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["9090:9090"]
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    environment: {GF_AUTH_ANONYMOUS_ENABLED: "true", GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer}
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["3000:3000"]
+    depends_on: [prometheus]
+
+volumes:
+  pgdata:
+  qdrant_data:

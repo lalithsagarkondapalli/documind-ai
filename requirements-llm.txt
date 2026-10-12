@@ -1,0 +1,2 @@
+# Only needed with LLM_PROVIDER=anthropic
+anthropic>=0.40

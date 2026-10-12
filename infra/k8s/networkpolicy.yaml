@@ -1,0 +1,21 @@
+# Baseline: only port 8000 may reach the API pods; the API may only talk out to DNS and the data tier / HTTPS.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: documind-api
+  namespace: documind
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/name: documind-api}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - ports: [{port: 8000, protocol: TCP}]
+  egress:
+    - ports: [{port: 53, protocol: UDP}, {port: 53, protocol: TCP}]
+    - ports:
+        - {port: 5432, protocol: TCP}   # PostgreSQL (RDS)
+        - {port: 6379, protocol: TCP}   # Redis (ElastiCache)
+        - {port: 6333, protocol: TCP}   # Qdrant HTTP
+        - {port: 6334, protocol: TCP}   # Qdrant gRPC
+        - {port: 4318, protocol: TCP}   # OTLP/HTTP
+        - {port: 443, protocol: TCP}    # LLM provider API

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: documind-config
+  namespace: documind
+data:
+  ENVIRONMENT: production
+  VECTOR_BACKEND: qdrant
+  QDRANT_URL: http://qdrant.documind.svc.cluster.local:6333
+  LLM_PROVIDER: anthropic
+  REVIEW_CONFIDENCE_THRESHOLD: "0.85"
+  INDEX_SYNC_INTERVAL_SECONDS: "2"
+  OTLP_ENDPOINT: http://otel-collector.observability.svc.cluster.local:4318/v1/traces

@@ -1,0 +1,9 @@
+region      = "us-east-1"
+environment = "dev"
+
+# REQUIRED: your GitHub "owner/repo", allowed to deploy via OIDC
+github_repository = "your-github-username/documind-ai"
+
+# Production hardening
+# single_nat_gateway      = false
+# eks_public_access_cidrs = ["203.0.113.0/24"]

@@ -1,0 +1,193 @@
+{
+  "run_metadata": {
+    "timestamp_utc": "2026-10-12T19:35:16.590935+00:00",
+    "python_version": "3.12.3",
+    "embedding_provider": "local-hashed-bow",
+    "llm_judge_mode": "heuristic (no API key set)",
+    "corpus_n_documents": 60,
+    "corpus_n_chunks": 542,
+    "corpus_n_questions": 180
+  },
+  "retrieval": {
+    "document_scoped": {
+      "dense": {
+        "mode": "dense",
+        "scope": "document",
+        "k": 5,
+        "n_questions": 180,
+        "recall_at_k": 0.9,
+        "precision_at_k": 0.18,
+        "mrr": 0.4377,
+        "ndcg_at_k": 0.5571,
+        "hit_rate": 0.9,
+        "status": "measured",
+        "method": "Recall/Precision/MRR/NDCG computed against synthetic golden set with known relevant-chunk labels; methodology follows BEIR/MTEB IR evaluation conventions."
+      },
+      "bm25": {
+        "mode": "bm25",
+        "scope": "document",
+        "k": 5,
+        "n_questions": 180,
+        "recall_at_k": 0.9333,
+        "precision_at_k": 0.1867,
+        "mrr": 0.4656,
+        "ndcg_at_k": 0.5872,
+        "hit_rate": 0.9333,
+        "status": "measured",
+        "method": "Recall/Precision/MRR/NDCG computed against synthetic golden set with known relevant-chunk labels; methodology follows BEIR/MTEB IR evaluation conventions."
+      },
+      "hybrid": {
+        "mode": "hybrid",
+        "scope": "document",
+        "k": 5,
+        "n_questions": 180,
+        "recall_at_k": 0.9222,
+        "precision_at_k": 0.1844,
+        "mrr": 0.4502,
+        "ndcg_at_k": 0.5722,
+        "hit_rate": 0.9222,
+        "status": "measured",
+        "method": "Recall/Precision/MRR/NDCG computed against synthetic golden set with known relevant-chunk labels; methodology follows BEIR/MTEB IR evaluation conventions."
+      }
+    },
+    "corpus_wide": {
+      "dense": {
+        "mode": "dense",
+        "scope": "corpus",
+        "k": 5,
+        "n_questions": 180,
+        "recall_at_k": 0.0056,
+        "precision_at_k": 0.0011,
+        "mrr": 0.0011,
+        "ndcg_at_k": 0.0021,
+        "hit_rate": 0.0056,
+        "status": "measured",
+        "method": "Recall/Precision/MRR/NDCG computed against synthetic golden set with known relevant-chunk labels; methodology follows BEIR/MTEB IR evaluation conventions."
+      },
+      "bm25": {
+        "mode": "bm25",
+        "scope": "corpus",
+        "k": 5,
+        "n_questions": 180,
+        "recall_at_k": 0.0167,
+        "precision_at_k": 0.0033,
+        "mrr": 0.0036,
+        "ndcg_at_k": 0.0067,
+        "hit_rate": 0.0167,
+        "status": "measured",
+        "method": "Recall/Precision/MRR/NDCG computed against synthetic golden set with known relevant-chunk labels; methodology follows BEIR/MTEB IR evaluation conventions."
+      },
+      "hybrid": {
+        "mode": "hybrid",
+        "scope": "corpus",
+        "k": 5,
+        "n_questions": 180,
+        "recall_at_k": 0.0222,
+        "precision_at_k": 0.0044,
+        "mrr": 0.0055,
+        "ndcg_at_k": 0.0095,
+        "hit_rate": 0.0222,
+        "status": "measured",
+        "method": "Recall/Precision/MRR/NDCG computed against synthetic golden set with known relevant-chunk labels; methodology follows BEIR/MTEB IR evaluation conventions."
+      }
+    }
+  },
+  "rag_quality": {
+    "n_samples": 100,
+    "context_precision": 0.19,
+    "context_recall": 0.95,
+    "faithfulness": 0.8369,
+    "answer_relevancy": 0.691,
+    "citation_accuracy": 0.91,
+    "hallucination_rate_observed": 0.09,
+    "hallucination_detector_precision": 1.0,
+    "hallucination_detector_recall": 0.7778,
+    "judge_status": "estimated (heuristic judge, no LLM API key set)",
+    "note": "context_precision/context_recall/citation_accuracy are deterministic and always 'measured'. faithfulness/answer_relevancy depend on the judge backend -- see judge_status."
+  },
+  "latency": {
+    "n_requests": 300,
+    "p50_ms": 0.116,
+    "p90_ms": 0.164,
+    "p95_ms": 0.184,
+    "p99_ms": 0.208,
+    "min_ms": 0.093,
+    "max_ms": 0.412,
+    "mean_ms": 0.125,
+    "throughput_rps": 8007.36,
+    "wall_time_s": 0.037,
+    "status": "measured",
+    "scope": "retrieval-only latency (dense+BM25 hybrid search against in-memory index); does NOT include LLM generation time or network latency -- run this against a live deployed API endpoint (see load_test.py) for full end-to-end request latency."
+  },
+  "token_cost": {
+    "tokenizer": "word-count-approximation (tiktoken unavailable in this environment; install + allow network access to openaipublic.blob.core.windows.net for exact BPE counts)",
+    "n_samples": 100,
+    "avg_input_tokens_per_query": 295.3,
+    "avg_output_tokens_per_query": 41.6,
+    "pricing_table_used": {
+      "frontier": {
+        "name": "frontier-tier (e.g. Claude Sonnet / GPT-4o class)",
+        "input_per_1m": 3.0,
+        "output_per_1m": 15.0
+      },
+      "small": {
+        "name": "small-tier (e.g. Claude Haiku / GPT-4o-mini class)",
+        "input_per_1m": 0.25,
+        "output_per_1m": 1.25
+      }
+    },
+    "baseline_cost_per_query_usd": 0.00151,
+    "tiered_cost_per_query_usd": 0.000403,
+    "cost_savings_pct_from_tiering": 73.33,
+    "frontier_call_fraction_assumption": 0.2,
+    "monthly_queries_assumption": 50000,
+    "baseline_monthly_cost_usd": 75.52,
+    "tiered_monthly_cost_usd": 20.14,
+    "monthly_savings_usd": 55.38,
+    "status": "measured token counts + illustrative pricing (update PRICING dict from current provider pricing pages); monthly figures are projections based on the stated monthly_queries assumption, not observed production volume."
+  },
+  "ingestion": {
+    "n_documents": 60,
+    "total_pages": 172,
+    "n_chunks": 542,
+    "embedding_time_s": 0.0177,
+    "embedding_chunks_per_sec": 30662.82,
+    "pages_per_minute": 583838.11,
+    "documents_per_hour": 12219867.32,
+    "status": "measured",
+    "scope": "measures local embedding-generation throughput only (text already extracted). Does NOT include: PDF text-extraction time (PyMuPDF), network latency to an embeddings API if using a hosted model, or OCR time for scanned documents. OCR speed/accuracy requires real scanned samples and is intentionally not fabricated here -- see README.",
+    "ocr_speed_pages_per_min": null,
+    "ocr_accuracy_cer": null,
+    "ocr_status": "not measured -- requires a real scanned-document sample set (see README)"
+  },
+  "vector_search": {
+    "n_vectors": 542,
+    "embedding_dim": 256,
+    "index_build_time_s": 0.0177,
+    "index_memory_mb": 0.529,
+    "process_rss_delta_mb": 1.211,
+    "n_queries": 200,
+    "query_latency_p50_ms": 0.102,
+    "query_latency_p95_ms": 0.1692,
+    "query_latency_p99_ms": 2.2939,
+    "status": "measured",
+    "scope": "in-memory numpy brute-force cosine search (no ANN index, no disk I/O, no network). This is a lower bound for a real Qdrant/FAISS HNSW deployment under network+disk conditions, and an upper bound for raw compute cost at this corpus size -- report both boundaries rather than implying this equals production vector-DB latency."
+  },
+  "cache": {
+    "backend": "in-memory (no REDIS_URL set)",
+    "n_requests": 500,
+    "repeat_rate_assumption": 0.4,
+    "cache_hits": 356,
+    "cache_misses": 144,
+    "cache_hit_ratio": 0.712,
+    "cache_get_latency_p50_ms": 0.00019,
+    "cache_get_latency_p95_ms": 0.00031,
+    "embedding_calls_saved": 356,
+    "embedding_calls_saved_pct": 71.2,
+    "status": "measured",
+    "note": "repeat_rate_assumption models a reviewer session pattern (re-querying an open document); it is an explicit simulation parameter, not an observed production traffic statistic -- re-run with your own real query logs once available."
+  },
+  "load_test": {
+    "status": "not run -- requires a live deployed API endpoint. Run load_test.py separately against docker-compose or a real deployment, then merge its output CSVs here."
+  }
+}

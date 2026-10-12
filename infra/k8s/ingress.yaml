@@ -1,0 +1,19 @@
+# Requires the AWS Load Balancer Controller. Set the ACM certificate ARN and host for your environment.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: documind-api
+  namespace: documind
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:REGION:ACCOUNT:certificate/REPLACE_ME
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+spec:
+  ingressClassName: alb
+  rules:
+    - host: documind.example.com
+      http:
+        paths:
+          - {path: /, pathType: Prefix, backend: {service: {name: documind-api, port: {name: http}}}}

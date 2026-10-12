@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: documind
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - qdrant.yaml
+  - db-init-job.yaml
+  - deployment.yaml
+  - service.yaml
+  - hpa.yaml
+  - pdb.yaml
+  - networkpolicy.yaml
+  - ingress.yaml
+images:
+  - name: documind-api
+    newName: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/documind-api   # set by the deploy workflow
+    newTag: latest-placeholder

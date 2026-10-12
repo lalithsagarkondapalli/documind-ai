@@ -1,0 +1,9 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: documind-api
+  namespace: documind
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels: {app.kubernetes.io/name: documind-api}

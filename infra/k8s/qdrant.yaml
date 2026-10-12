@@ -1,0 +1,43 @@
+# Single-node Qdrant for the vector index. For HA, run Qdrant in distributed mode or use Qdrant Cloud.
+apiVersion: v1
+kind: Service
+metadata:
+  name: qdrant
+  namespace: documind
+spec:
+  clusterIP: None
+  selector: {app.kubernetes.io/name: qdrant}
+  ports: [{name: http, port: 6333}, {name: grpc, port: 6334}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: qdrant
+  namespace: documind
+spec:
+  serviceName: qdrant
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: qdrant}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: qdrant}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 1000, fsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: qdrant
+          image: qdrant/qdrant:v1.12.4
+          ports: [{name: http, containerPort: 6333}, {name: grpc, containerPort: 6334}]
+          readinessProbe: {httpGet: {path: /readyz, port: http}, periodSeconds: 10}
+          livenessProbe: {httpGet: {path: /livez, port: http}, initialDelaySeconds: 15, periodSeconds: 15}
+          resources:
+            requests: {cpu: 500m, memory: 1Gi}
+            limits: {cpu: "2", memory: 4Gi}
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: ["ALL"]}}
+          volumeMounts: [{name: storage, mountPath: /qdrant/storage}]
+  volumeClaimTemplates:
+    - metadata: {name: storage}
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: gp3
+        resources: {requests: {storage: 50Gi}}

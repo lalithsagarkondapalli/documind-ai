@@ -1,0 +1,9 @@
+{
+  "_comment": "Minimum acceptable values. CI fails if a metric drops below its floor. Floors sit a little below the current measured baseline so real regressions fail the build but harmless noise does not.",
+  "retrieval.document_scoped.hybrid.recall_at_k":   {"min": 0.85},
+  "retrieval.document_scoped.hybrid.ndcg_at_k":     {"min": 0.50},
+  "retrieval.document_scoped.hybrid.hit_rate":      {"min": 0.85},
+  "rag_quality.citation_accuracy":                  {"min": 0.85},
+  "rag_quality.context_recall":                     {"min": 0.90},
+  "rag_quality.hallucination_detector_precision":   {"min": 0.90}
+}

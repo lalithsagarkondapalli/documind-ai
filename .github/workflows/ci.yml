@@ -1,0 +1,134 @@
+name: ci
+
+on:
+  push: {branches: [main]}
+  pull_request: {branches: [main]}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check app tests/unit tests/integration tests/conftest.py
+      - run: ruff format --check app tests/unit tests/integration tests/conftest.py
+      - run: pytest
+
+  integration-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: {POSTGRES_USER: documind, POSTGRES_PASSWORD: documind, POSTGRES_DB: documind_test}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U documind" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://documind:documind@localhost:5432/documind_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements-dev.txt
+      - run: pytest tests/integration
+
+  # Fails the build when retrieval / citation / hallucination-detection quality regresses.
+  eval-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install -r requirements-eval.txt
+      - name: Generate synthetic benchmark corpus
+        run: python tests/evaluation/synthetic_dataset_generator.py --n-docs 60 --n-questions 180 --out-dir data
+      - name: Run evaluation suite
+        run: python tests/evaluation/run_eval.py --data-dir data --reports-dir reports
+      - name: Enforce metric thresholds
+        run: python tests/evaluation/check_gate.py --metrics reports/metrics.json
+      - name: Build report artifacts
+        if: always()
+        run: |
+          python tests/evaluation/generate_resume_bullets.py --metrics-file reports/metrics.json --out reports/resume_metrics.md
+          python tests/evaluation/benchmark_dashboard.py --metrics-file reports/metrics.json --out reports/dashboard.html
+          python tests/evaluation/pdf_report.py --metrics-file reports/metrics.json --out reports/benchmark_report.pdf
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: evaluation-reports, path: reports/}
+
+  infra-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip}
+      - run: pip install pyyaml
+      - name: Validate Kubernetes manifests
+        run: python scripts/validate_manifests.py infra/k8s
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: "1.9.8"}
+      - name: Terraform fmt / init / validate
+        working-directory: infra/terraform
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false -input=false
+          terraform validate
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t documind-api:ci .
+      - name: Smoke-test the container
+        run: |
+          docker run -d --name api -p 8000:8000 -e JWT_SECRET=ci-smoke-secret -e ENVIRONMENT=local documind-api:ci
+          for i in $(seq 1 30); do curl -fsS localhost:8000/health && break || sleep 2; done
+          curl -fsS localhost:8000/ready
+          docker logs api
+
+  # Deploys only when EVERY job above passed, including the evaluation gate. Skipped unless the
+  # repository variable DEPLOY_ENABLED is "true" (set it after running Terraform; see README).
+  deploy:
+    needs: [lint-test, integration-postgres, eval-gate, infra-validate, docker]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # GitHub OIDC -> AWS; no long-lived AWS keys are stored
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push image (immutable tag = commit SHA)
+        run: |
+          IMAGE=${{ steps.ecr.outputs.registry }}/documind-api:${{ github.sha }}
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+      - name: Point kubectl at the cluster
+        run: aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "${{ vars.AWS_REGION }}"
+      - name: Set the image in the kustomization
+        working-directory: infra/k8s
+        run: |
+          sed -i "s|newName: .*|newName: ${{ steps.ecr.outputs.registry }}/documind-api|; s|newTag: .*|newTag: ${{ github.sha }}|" kustomization.yaml
+      - name: Apply manifests
+        run: |
+          kubectl delete job documind-db-init -n documind --ignore-not-found
+          kubectl apply -k infra/k8s
+      - name: Wait for DB init job and rollout
+        run: |
+          kubectl wait --for=condition=complete job/documind-db-init -n documind --timeout=180s
+          kubectl rollout status deployment/documind-api -n documind --timeout=300s
