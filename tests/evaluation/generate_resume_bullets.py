@@ -58,9 +58,10 @@ def build_bullets(m: dict) -> list[str]:
     judge_status = _get(m, "rag_quality.judge_status", "")
     if citation_acc is not None:
         bullets.append(
-            f"Implemented deterministic citation-validation (every answer citation checked against the "
-            f"actual retrieved chunk set), achieving {citation_acc*100:.1f}% citation accuracy on "
-            f"{_get(m, 'rag_quality.n_samples')} evaluated queries (measured, not judge-dependent)."
+            f"Implemented deterministic citation validation (every cited chunk id checked against the "
+            f"retrieved set); on {_get(m, 'rag_quality.n_samples')} synthetic queries it flagged "
+            f"{(1 - citation_acc)*100:.1f}% of answers as lacking a valid citation, matching the "
+            f"{hallu_rate*100:.1f}% that were deliberately fabricated (a validator test, not a model-accuracy claim)."
         )
     if hallu_precision is not None:
         bullets.append(

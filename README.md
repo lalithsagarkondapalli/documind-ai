@@ -1,5 +1,7 @@
 # DocuMind AI
 
+[![ci](https://github.com/lalithsagarkondapalli/documind-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/lalithsagarkondapalli/documind-ai/actions/workflows/ci.yml)
+
 Multi-agent RAG service for reviewing contracts and regulatory documents. It answers questions with citations that are
 **verified against the retrieved text**, flags clauses against a configurable rulebook, and routes risky findings to a
 human reviewer with a full audit trail. Built with FastAPI, LangGraph, Qdrant, PostgreSQL and Redis.
@@ -11,19 +13,22 @@ human reviewer with a full audit trail. Built with FastAPI, LangGraph, Qdrant, P
 
 | Area | Status |
 |---|---|
-| API, JWT auth + RBAC, tenant isolation, ingestion (txt/PDF), hybrid retrieval, LangGraph agent, citation validation, review queue, audit log, caching, Prometheus metrics | **Implemented and tested.** 70 automated tests, plus a live run with 3 uvicorn worker processes |
+| API, JWT auth + RBAC, tenant isolation, ingestion (txt/PDF), hybrid retrieval, LangGraph agent, citation validation, review queue, audit log, caching, Prometheus metrics | **Implemented and tested.** 73 automated tests, plus a live run with 3 uvicorn worker processes |
 | Multi-replica correctness (database as source of truth, per-replica index sync) | **Implemented and tested** with two app instances over one database. Found and fixed during development (see [architecture](docs/architecture.md)) |
 | Evaluation framework and CI regression gate | **Implemented and run.** Results below |
-| Dockerfile, docker-compose, Kubernetes manifests, Terraform (AWS), GitHub Actions | **Authored, statically checked only. Never deployed** (details below) |
+| Dockerfile, Kubernetes manifests, Terraform (AWS), GitHub Actions | **Verified in CI, never deployed.** CI builds and boots the image, runs the integration tests on PostgreSQL, validates Terraform and the manifests. No `terraform apply`, no cluster, deploy job never run |
 | LLM | Default provider is a **deterministic mock** (extractive, not a language model). An Anthropic provider is implemented but has not been run against the real API |
 | Embeddings | A **local lexical** hashed bag-of-words embedder: no semantic understanding |
 
-**What "statically checked" means.** Kubernetes manifests pass `scripts/validate_manifests.py` (selectors, HPA target,
-pinned images, resource limits, security contexts). Terraform parses and is `tofu fmt`-clean, but `terraform validate`,
-`plan` and `apply` were **not** run. The Docker image, compose stack, PostgreSQL, a real Redis/Qdrant server, and the
-GitHub Actions workflow were not run in the environment where this was developed (Redis is tested against `fakeredis`,
-Qdrant in embedded mode). The CI workflow builds the image, smoke-tests the container, runs the tests against
-PostgreSQL, and runs `terraform validate`; the first CI run is the first time those execute.
+**What is verified, and how.** On every push, GitHub Actions runs (all passing on `main`, see the badge): lint; the full
+test suite; the 27 integration tests against a **PostgreSQL service container**; the evaluation gate;
+`terraform fmt / init / validate`; the Kubernetes manifest validator; and a **Docker build whose container is booted and
+probed** at `/health` and `/ready`. The first CI run caught a real bug (the non-root container could not create its
+default SQLite file); it is fixed and guarded by a test.
+
+**Never run:** `terraform plan` / `apply` (no AWS account was used), the Kubernetes manifests against a real cluster, the
+deploy job (skipped unless `DEPLOY_ENABLED=true`), the `docker-compose` stack, a real Redis or Qdrant server (Redis is
+tested against `fakeredis`, Qdrant in embedded mode), and the Anthropic provider against the real API.
 
 ## Architecture
 
@@ -48,7 +53,7 @@ Full design, request flow, multi-replica reasoning and trade-offs: [docs/archite
 
 ```bash
 pip install -r requirements-dev.txt
-pytest                                   # 70 tests
+pytest                                   # 73 tests
 JWT_SECRET=dev-secret uvicorn app.main:app --reload
 ```
 
@@ -103,7 +108,7 @@ deliberately made fabricated so the detector could be scored):
 
 | Metric | Value | Notes |
 |---|---|---|
-| Citation accuracy | 91.0% | Deterministic: cited chunk must be in the retrieved set. No LLM involved |
+| Citation validity rate | 91.0% | **Equals 1 minus the injected fabrication rate, by construction**: the mock answer generator always cites a retrieved chunk except on the deliberately fabricated answers (9.0%). It shows the validator fires; it is **not** a measure of how accurately any model cites |
 | Context recall / precision | 95.0% / 19.0% | Precision is low because top-5 is requested and one chunk is relevant |
 | Hallucination detector | precision 100.0%, recall 77.8% | Scored against the injected fabrications, not real-world hallucination rates |
 | Faithfulness / answer relevancy | 0.837 / 0.691 | **Estimated**: a word-overlap heuristic judge, not an LLM |
@@ -120,13 +125,14 @@ a regression (a missing metric also fails). CI runs it, and the deploy job `need
 
 ## Testing
 
-70 tests: unit (retrieval, ingestion, agent graph, security, cache incl. Redis path, OpenTelemetry spans, eval gate,
-CI-workflow guard) and integration (auth, RBAC, tenant isolation, upload → query → review → audit flow, cache
+73 tests: unit (retrieval, ingestion, agent graph, security, cache incl. Redis path, OpenTelemetry spans, eval gate,
+CI-workflow and Dockerfile guards) and integration (auth, RBAC, tenant isolation, upload → query → review → audit flow, cache
 invalidation, restart persistence, multi-replica sync, startup races, production safety checks).
 
 The security-critical tests were mutation-checked: removing the org filter, the document-ownership check, or the
-citation validator makes tests fail. Two real bugs were found late and fixed with regression tests: a multi-replica
-index-visibility bug, and a demo-user seeding race that crashed one of several simultaneously starting workers.
+citation validator makes tests fail. Three real bugs were found late and fixed with regression tests: a multi-replica
+index-visibility bug, a demo-user seeding race that crashed one of several simultaneously starting workers, and a container
+that crashed on startup in the first CI run (the non-root user could not create the default SQLite file).
 
 ## CI/CD
 
